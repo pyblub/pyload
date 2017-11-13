@@ -133,7 +133,7 @@ class Base(object):
         for obj in args:
             strings.append(to_str(obj))
 
-        getattr(self.log, level)('{0}: {1}'.format(
+        getattr(self._log, level)('{0}: {1}'.format(
             self.__name__, sep.join(strings)))
 
     def get_name(self):

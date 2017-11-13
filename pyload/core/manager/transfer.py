@@ -65,6 +65,7 @@ class TransferManager(BaseManager):
     @lock
     def start_download_thread(self, info):
         """Use a free dl thread or create a new one."""
+        print('start_download_thread----------------------------')
         if self.free:
             thread = self.free[0]
             del self.free[0]

@@ -328,7 +328,7 @@ class CurlDownload(DownloadRequest):
                 self.last_arrived = [c.arrived for c in self.chunks]
                 last_time_check = t
 
-            if self.__abort:
+            if self._abort:
                 raise Abort
 
             self.manager.select(1)

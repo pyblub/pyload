@@ -158,6 +158,8 @@ def _gen_config():
             ('http', 'Protocol', None, ('http', 'socks4', 'socks5'), InputType.Str)),
         ('host',
             ('localhost:7070', 'IP address', None, None, InputType.Address)),
+        ('port',
+            (7070, '', None, None, InputType.Int)),
         ('username',
             (None, 'Username', None, None, InputType.Str)),
         ('password',

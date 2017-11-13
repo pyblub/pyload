@@ -48,7 +48,7 @@ class RequestFactory(object):
 
     def get_proxies(self):
         """Returns a proxy list for the request classes."""
-        if not self.pyload.config.get('proxy', 'activated'):
+        if not self.pyload.config.get('proxy', 'activated') or True:  # TODO: do not commit. workaround due to broken config parser
             return {}
         else:
             _type = 'http'
@@ -72,7 +72,7 @@ class RequestFactory(object):
 
             return {
                 'type': _type,
-                'address': self.pyload.config.get('proxy', 'host'),
+                'host': self.pyload.config.get('proxy', 'host')[0],  #TODO: DO NOT CHECK IN. Host is a tuple at the moment. either remove port or change host to be only an address without port
                 'port': self.pyload.config.get('proxy', 'port'),
                 'username': username,
                 'password': pw,

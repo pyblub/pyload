@@ -50,6 +50,22 @@ convert_map = {
     InputType.StrList: parse.entries
 }
 
+convert_map_write = {
+    InputType.NA: lambda x: x,
+    InputType.Str: to_str,
+    InputType.Int: int,
+    InputType.File: fullpath,
+    InputType.Folder: lambda x: os.path.dirname(fullpath(x)),
+    InputType.Password: to_str,
+    InputType.Bool: bool,
+    InputType.Float: float,
+    # InputType.Octal: lambda x: oct(int(x, 8)),
+    InputType.Size: parse.bytesize,
+    InputType.Address: _parse_address,
+    InputType.Bytes: to_bytes,
+    InputType.StrList: parse.entries
+}
+
 
 class ConfigOption(object):
 
@@ -100,7 +116,7 @@ class ConfigOption(object):
     def get_default(self):
         return self.default
 
-    def set(self, value, store=True):
+    def set(self, value, store=False):
         norm_value = self._normalize_value(value)
         if self.allowed_values and norm_value not in self.allowed_values:
             raise InvalidValueError(value)
@@ -254,9 +270,8 @@ class ConfigParser(InscDict):
             pass
 
         else:
+            self.store()
             return
-
-        self.store()
 
     def _backup_fileconfig(self):
         path = self.path
