@@ -27,8 +27,11 @@ comment = ''
 paused = None
 owner = 1
 
-url = 'http://www.share-online.biz/dl/2GUU4IXOUD'
-plugin = 'ShareonlineBiz'
+# url = 'http://www.share-online.biz/dl/2GUU4IXOUD'
+# plugin = 'ShareonlineBiz'
+
+url = 'https://www.haag-networx.at/ls/index.php'
+plugin = 'Html'
 
 pkg = 1
 #pkg = c.filemanager.add_package(name, folder, root, password, site, comment, paused, owner)
@@ -47,9 +50,10 @@ info = c.filemanager.get_package_info(pkg)
 
 print(info)
 
-file_info = c.filemanager.get_file_info(3)
+for fi in info.fids:
+    file_info = c.filemanager.get_file_info(fi)
 
-print(file_info)
+    print(file_info)
 
 #c.exit()
 

@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import base64
 import re
 import time
 import os
@@ -9,9 +10,10 @@ import urllib.parse
 
 #from ..captcha.ReCaptcha import ReCaptcha
 
-from pyload.core.network.base import Fail
 from pyload.core.network.hoster import Hoster
+from pyload.utils.convert import to_str
 
+#TODO: test replacing self.file.plugin with self
 
 class ShareonlineBiz(Hoster):
     __name__ = "ShareonlineBiz"
@@ -51,10 +53,13 @@ class ShareonlineBiz(Hoster):
         super(ShareonlineBiz, self).__init__(file)
 
         self.info = {}
+        self.link = ''
 
     def process(self, file):
         """The 'main' method of every plugin, you **have to** overwrite it."""
         self.handle_free(file)
+
+        self.download(self.link)
 
         return
 
@@ -93,26 +98,27 @@ class ShareonlineBiz(Hoster):
         m = re.search(r'var wait=(\d+);', self.data)
         self.set_wait(int(m.group(1)) if m else 30)
 
-        res = self.load("%s/free/captcha/%d" % (self.pyfile.url, int(time.time() * 1000)),
+        res = to_str(self.load("%s/free/captcha/%d" % (self.file.url, int(time.time() * 1000)),
                         post={'dl_free': "1",
                               'recaptcha_challenge_field': challenge,
-                              'recaptcha_response_field': response})
+                              'recaptcha_response_field': response}))
         if res != "0":
-            self.captcha.correct()
+            #self.captcha.correct()
             return res
         else:
-            self.retry_captcha()
+            #self.retry_captcha()
+            pass
 
     def handle_free(self, pyfile):
         self.wait(3)
 
-        self.data = self.load("%s/free/" % pyfile.url,
-                              post={'dl_free': "1", 'choice': "free"})
+        self.data = to_str(self.load("%s/free/" % pyfile.url,
+                              post={'dl_free': "1", 'choice': "free"}))
 
         self.check_errors()
 
         res = self.handle_captcha()
-        self.link = res.decode('base64')
+        self.link = to_str(base64.b64decode(res))
 
         if not self.link.startswith("http://"):
             self.error(self._("Invalid url"))
@@ -135,11 +141,11 @@ class ShareonlineBiz(Hoster):
     def handle_premium(self, pyfile):
         self.api_data = dlinfo = {}
 
-        html = self.load("https://api.share-online.biz/account.php",
+        html = to_str(self.load("https://api.share-online.biz/account.php",
                          get={'username': self.account.user,
                               'password': self.account.get_login('password'),
                               'act': "download",
-                              'lid': self.info['fileid']})
+                              'lid': self.info['fileid']}))
 
         self.pyload.log.debug(html)
 
@@ -239,8 +245,8 @@ class ShareonlineBiz(Hoster):
 
     #: Currently secure_token is supported in ReCaptcha v2 only
     def _challenge_v1(self, key, secure_token):
-        html = self.file.plugin.load("http://www.google.com/recaptcha/api/challenge",
-                                       get={'k': key})
+        html = to_str(self.file.plugin.load("http://www.google.com/recaptcha/api/challenge",
+                                       get={'k': key}))
         try:
             challenge = re.search("challenge : '(.+?)',", html).group(1)
             server = re.search("server : '(.+?)',", html).group(1)
@@ -253,13 +259,14 @@ class ShareonlineBiz(Hoster):
         return self.result(server, challenge, key)
 
     def result(self, server, challenge, key):
+        #TODO: is the next statement required?
         self.file.plugin.load(
             "http://www.google.com/recaptcha/api/js/recaptcha.js")
-        html = self.file.plugin.load("http://www.google.com/recaptcha/api/reload",
+        html = to_str(self.file.plugin.load("http://www.google.com/recaptcha/api/reload",
                                        get={'c': challenge,
                                             'k': key,
                                             'reason': "i",
-                                            'type': "image"})
+                                            'type': "image"}))
 
         try:
             challenge = re.search('\(\'(.+?)\',', html).group(1)
@@ -286,11 +293,11 @@ class ShareonlineBiz(Hoster):
             decode=False)#,
             #req=req or self.file.plugin.req)
 
-        time_ref = ("%.2f" % time.time())[-6:].replace(".", "")
-        with open(os.path.join("tmp", "captcha_image_%s_%s.%s" % (self.file.plugin.__name__, time_ref, input_type)), "wb") as img_f:
+        time_ref = ('%.2f' % time.time())[-6:].replace('.', '')
+        with open(os.path.join(r'C:\DATA\PyCharmProject\pyload_folders\temp', 'captcha_image_%s_%s.%s' % (self.file.plugin.__name__, time_ref, input_type)), 'wb') as img_f:
             img_f.write(img)
 
-        result = "calle calle"
+        result = 'calle calle'
 
         print('Use debugger to stop here.')
 

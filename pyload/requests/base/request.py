@@ -75,7 +75,7 @@ class Request(with_metaclass(ABCMeta, object)):
         self.config = config
 
         # Create a new context if not given
-        self.context = self.CONTEXT_CLASS if context is None else context
+        self.context = self.CONTEXT_CLASS() if context is None else context  #instantiate CONTEXT_CLASS
 
         # Store options in dict
         self.options = {} if options is None else options
