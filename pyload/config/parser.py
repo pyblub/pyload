@@ -62,9 +62,9 @@ convert_map_read = {
 convert_map_write = {
     InputType.NA: lambda x: x,
     InputType.Octal: lambda x: format(x, 'o'),
-    InputType.Address: lambda x: '{}:{}'.format(x[0], x[1]) if isinstance(x,
-                                                                          tuple) and len(
-        x) == 2 else x,
+    InputType.Address: lambda x: '{}:{}'.format(x[0], x[1])
+                                 if isinstance(x, tuple) and len(x) == 2
+                                 else x,
     InputType.StrList: lambda x: ','.join(map(to_str, x))
 }
 
