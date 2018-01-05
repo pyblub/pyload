@@ -5,7 +5,6 @@ from pkg_resources import resource_filename
 
 from dulwich.repo import Repo
 from dulwich import porcelain
-from dulwich.index import build_index_from_tree
 from dulwich.diff_tree import tree_changes, CHANGE_DELETE, CHANGE_ADD, CHANGE_MODIFY
 
 import os
@@ -45,18 +44,10 @@ class UpdateManager(BaseManager):
         self.pyload.log.info(self._('Update plugin repository'))
         prev = self.repo.head()
 
-        remote_refs = porcelain.fetch(self.repo, self.plugin_repo)
-        if self.repo[self.HEAD] == remote_refs[self.HEAD]:
-            self.pyload.log.info(self._('No updates'))
-            return
-        self.repo[self.HEAD] = remote_refs[self.HEAD]
-        # builds new tree, but does not do any deletes.
+        # builds new tree from index, but does not do any deletes.
         # see: https://github.com/jelmer/dulwich/issues/452
         # and https://github.com/jelmer/dulwich/issues/588
-        build_index_from_tree(self.repo.path,
-                              self.repo.index_path(),
-                              self.repo.object_store,
-                              self.repo[self.HEAD].tree)
+        porcelain.pull(self.repo, self.plugin_repo)
 
         prev_commit = self.repo.get_object(prev)
         last_commit = self.repo.get_object(self.repo.head())
