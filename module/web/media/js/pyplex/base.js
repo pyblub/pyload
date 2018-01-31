@@ -275,6 +275,37 @@ $(function() {
         success:LoadJsonToContent
     });
 
+    $("#cap_selenium_content").click(function(event) {
+        var className = '';
+        var nth = -1;
+        if ($(event.target).attr("id") === "recaptcha-verify-button") {
+            className = "recaptcha-verify-button";
+            nth = 0;
+        } else {
+            // sometimes the img is clicked, but we need the parent div with class rc-image-tile-wrapper needs to be clicked
+            // sometimes the div with class rc-image-tile-overlay is clicked, but we need the parent div with class rc-image-tile-wrapper needs to be clicked
+            // otherwise returning the class works for rc-imageselect-checkbox to unckeck an image
+            className = $(event.target).prop("tagName") === "IMG" || $(event.target).attr("class") === "rc-image-tile-overlay" ? $(event.target).parent().attr("class") : $(event.target).attr("class");
+            nth = $(event.target).prop("tagName") === "IMG" ? getElementNth($(event.target).parent().get(0), className) : getElementNth(event.target, className);
+            if (nth < 0) {
+                alert('Something went wrong: cap_selenium_content');
+                return;
+            }
+        }
+        var id = $("#cap_selenium_content").attr("data-id");
+        $.ajax({
+            method:"post",
+            url: "{{'/json/interact_captcha/'|url}}" + id + "/" + encodeURI(className) + "/" + nth + "/",
+            data: { id: id, element: className, nth: nth},
+            async: true,
+            timeout: 30000,
+            success: function(c) {
+                set_captcha(c);
+                return (c.captcha ? void 0 : clear_captcha());
+            }
+        });
+    });
+
     setInterval(function() {
         $.ajax({
             method:"post",
@@ -285,6 +316,16 @@ $(function() {
         });
     }, 4000);
 });
+
+function getElementNth(element, className) {
+    var possible = $('.' + className);
+    for(i = 0; i < possible.length; i++) {
+        if (possible[i] === element) {
+            return i
+        }
+    }
+    return -1;
+}
 
 function LoadJsonToContent(a) {
     var notification;
@@ -346,14 +387,20 @@ function set_captcha(a) {
         $("#cap_submit").css("display", "inline");
         $("#cap_box #cap_title").text('');
         $("#cap_textual").css("display", "block");
+        $("#cap_selenium").css("display", "none");
         return $("#cap_positional").css("display", "none");
-    } else {
-        if (a.result_type === "positional") {
-            $("#cap_positional_img").attr("src", a.src);
-            $("#cap_box #cap_title").text("{{_('Please click on the right captcha position.')}}");
-            $("#cap_submit").css("display", "none");
-            return $("#cap_textual").css("display", "none");
-        }
+    } else if (a.result_type === "positional") {
+        $("#cap_positional_img").attr("src", a.src);
+        $("#cap_box #cap_title").text("{{_('Please click on the right captcha position.')}}");
+        $("#cap_submit").css("display", "none");
+        $("#cap_selenium").css("display", "none");
+        return $("#cap_textual").css("display", "none");
+    } else if (a.result_type === "selenium") {
+        $("#cap_textual").css("display", "none");
+        $("#cap_positional").css("display", "none");
+        $("#cap_submit").css("display", "none");
+        $("#cap_selenium_content").html(a.src);
+        $("#cap_selenium_content").attr("data-id", a.id);
     }
 }
 
@@ -363,6 +410,7 @@ function load_captcha(b, a) {
             async: true,
             method: b,
             data: a,
+            timeout: 120000,
             success: function(c) {
                 set_captcha(c);
                 return (c.captcha ? void 0 : clear_captcha());

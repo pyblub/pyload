@@ -17,9 +17,16 @@
     @author: mkaay, RaNaN
 """
 
-from time import time
+from time import sleep, time
+from random import uniform
 from traceback import print_exc
 from threading import Lock
+
+from selenium import webdriver
+from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
 
 class CaptchaManager():
     def __init__(self, core):
@@ -91,9 +98,84 @@ class CaptchaTask():
         self.result = None
         self.waitUntil = None
         self.error = None #error message
+        self.driver = None # selenium driver for interaction
 
         self.status = "init"
         self.data = {} #handler can store data here
+
+    def start_interaction(self):
+        if not self.isInteractive():
+            return False
+
+        #self.data = "<html><body><p>What</p></body></html>"
+
+        options = Options()
+        options.add_argument("--headless")
+        self.driver = webdriver.Firefox(firefox_options=options, executable_path=r"/path/to/geckodriver")
+        self.driver.get(self.captchaImg)
+        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[0])
+        # *************  locate CheckBox  **************
+        CheckBox = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
+        )
+        # *************  click CheckBox  ***************
+        sleep(uniform(0.5, 0.7))
+        # making click on captcha CheckBox
+        CheckBox.click()
+        # ***************** back to main window **************************************
+        self.driver.switch_to.default_content()
+        sleep(uniform(1.0, 1.5))
+
+        if self.is_interaction_complete():
+            return True
+
+        # ************ switch to the second iframe by tag name ******************
+        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1]) # select iframe with captcha
+        self.data = self.driver.page_source # save data
+        self.driver.switch_to.default_content()  # switch back
+        return False
+
+    def interact(self, element, nth):
+        nth = int(nth)
+        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1])
+
+        print(element)
+        # if element == 'rc-image-tile-overlay':
+        #     element = 'rc-image-tile-wrapper'
+        if element == 'recaptcha-verify-button':
+            self.driver.find_element_by_id('recaptcha-verify-button').click()
+            print('click button')
+        elif element in ['rc-image-tile-wrapper', 'rc-imageselect-checkbox']:
+            selected_elements = self.driver.find_elements_by_class_name(element)
+            if 0 <= nth < len(selected_elements):
+                selected_elements[nth].click()
+                print('click')
+            else:
+                print('no click :(')
+                self.data = "<html><body><p>Something went wrong</p></body></html>"
+                return
+
+        sleep(uniform(1.0, 2.0))
+
+        self.driver.switch_to.default_content()  # switch back
+        if self.is_interaction_complete():
+            self.data = "<html><body><p>Successful</p></body></html>"
+            return True
+
+        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1])
+        self.data = self.driver.page_source  # save data
+        self.driver.switch_to.default_content()  # switch back
+
+    def is_interaction_complete(self):
+        response = self.driver.find_element_by_id('g-recaptcha-response').get_attribute('value')
+        if not response:
+            print('interaction not complete')
+            return False
+
+        self.setResult(response)
+        print('interaction complete')
+        print(response)
+        return True
 
     def getCaptcha(self):
         return self.captchaImg, self.captchaFormat, self.captchaResultType
@@ -101,12 +183,14 @@ class CaptchaTask():
     def setResult(self, text):
         if self.isTextual():
             self.result = text
-        if self.isPositional():
+        elif self.isPositional():
             try:
                 parts = text.split(',')
                 self.result = (int(parts[0]), int(parts[1]))
             except:
                 self.result = None
+        elif self.isInteractive():
+            self.result = text
 
     def getResult(self):
         try:
@@ -137,6 +221,10 @@ class CaptchaTask():
     def isPositional(self):
         """ returns if user have to click a specific region on the captcha """
         return self.captchaResultType == 'positional'
+
+    def isInteractive(self):
+        """ returns if text is written on the captcha """
+        return self.captchaResultType == 'selenium'
 
     def setWatingForUser(self, exclusive):
         if exclusive:
