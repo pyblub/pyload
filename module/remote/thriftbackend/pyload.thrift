@@ -154,6 +154,7 @@ struct CaptchaTask {
   2: binary data,
   3: string type,
   4: string resultType
+  5: bool interactive
 }
 
 struct EventInfo {

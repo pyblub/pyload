@@ -516,6 +516,7 @@ class CaptchaTask(TBase):
    - data
    - type
    - resultType
+   - interactive
   """
 
   __slots__ = [ 
@@ -523,6 +524,7 @@ class CaptchaTask(TBase):
     'data',
     'type',
     'resultType',
+    'interactive',
    ]
 
   thrift_spec = (
@@ -531,13 +533,15 @@ class CaptchaTask(TBase):
     (2, TType.STRING, 'data', None, None, ), # 2
     (3, TType.STRING, 'type', None, None, ), # 3
     (4, TType.STRING, 'resultType', None, None, ), # 4
+    (5, TType.BOOL, 'interactive', None, None, ), # 5
   )
 
-  def __init__(self, tid=None, data=None, type=None, resultType=None,):
+  def __init__(self, tid=None, data=None, type=None, resultType=None, interactive=None,):
     self.tid = tid
     self.data = data
     self.type = type
     self.resultType = resultType
+    self.interactive = interactive
 
 
 class EventInfo(TBase):

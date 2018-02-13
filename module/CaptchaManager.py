@@ -23,7 +23,7 @@ from traceback import print_exc
 from threading import Lock
 
 from selenium import webdriver
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.firefox.firefox_binary import FirefoxBinary
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
@@ -36,8 +36,8 @@ class CaptchaManager():
 
         self.ids = 0 #only for internal purpose
 
-    def newTask(self, img, format, file, result_type):
-        task = CaptchaTask(self.ids, img, format, file, result_type)
+    def newTask(self, img, format, file, result_type, initialize_driver=None):
+        task = CaptchaTask(self.ids, self.core, img, format, file, result_type, initialize_driver)
         self.ids += 1
         return task
 
@@ -88,8 +88,12 @@ class CaptchaManager():
 
 
 class CaptchaTask():
-    def __init__(self, id, img, format, file, result_type='textual'):
+    XPATH_IFRAME_CHECKBOX = "//div[@class='g-recaptcha']//iframe"
+    XPATH_IFRAME_CAPTCHA = "//iframe[@title='recaptcha challenge']"
+
+    def __init__(self, id, core, img, format, file, result_type='textual', initialize_driver=None):
         self.id = str(id)
+        self.core = core
         self.captchaImg = img
         self.captchaFormat = format
         self.captchaFile = file
@@ -99,25 +103,41 @@ class CaptchaTask():
         self.waitUntil = None
         self.error = None #error message
         self.driver = None # selenium driver for interaction
+        self.initialize_driver = initialize_driver
 
         self.status = "init"
         self.data = {} #handler can store data here
 
     def start_interaction(self):
         if not self.isInteractive():
+            self.core.log.error('CaptchaTask: task is not interactive')
             return False
 
-        #self.data = "<html><body><p>What</p></body></html>"
+        self.core.log.debug('CaptchaTask: start interactive')
+        if not self.core.config["reCAPTCHA"]["uBlockOrigin"]:
+            self.core.log.error('CaptchaTask: uBlockOrigin addon for firefox not found')
+            return False
+        binary = None
+        if self.core.config["reCAPTCHA"]["firefox_binary"]:
+            binary = FirefoxBinary(self.core.config["reCAPTCHA"]["firefox_binary"])
 
-        options = Options()
-        options.add_argument("--headless")
-        self.driver = webdriver.Firefox(firefox_options=options, executable_path=r"/path/to/geckodriver")
+        firefox_options = webdriver.FirefoxOptions()
+        firefox_options.add_argument('--headless')
+        self.driver = webdriver.Firefox(executable_path=self.core.config["reCAPTCHA"]["geckodriver"], firefox_options=firefox_options, firefox_binary=binary)
+        # install addon workaround, see https://github.com/SeleniumHQ/selenium/issues/4093
+        self.driver.install_addon(self.core.config["reCAPTCHA"]["uBlockOrigin"])  # add uBlock Origin to block computational intensive scripts (ads, miners etc.)
         self.driver.get(self.captchaImg)
-        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[0])
+        if self.initialize_driver:
+            self.initialize_driver(self.driver)
+
+        WebDriverWait(self.driver, 10).until(lambda d: d.execute_script('return document.readyState') == 'complete')
+
+        self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CHECKBOX))
         # *************  locate CheckBox  **************
-        CheckBox = WebDriverWait(self.driver, 10).until(
-            EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
-        )
+        # CheckBox = WebDriverWait(self.driver, 10).until(
+        #     EC.presence_of_element_located((By.ID, "recaptcha-anchor"))
+        # )
+        CheckBox = self.driver.find_element_by_id('recaptcha-anchor')
         # *************  click CheckBox  ***************
         sleep(uniform(0.5, 0.7))
         # making click on captcha CheckBox
@@ -127,31 +147,29 @@ class CaptchaTask():
         sleep(uniform(1.0, 1.5))
 
         if self.is_interaction_complete():
-            return True
+            return self
 
         # ************ switch to the second iframe by tag name ******************
-        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1]) # select iframe with captcha
+        self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CAPTCHA)) # select iframe with captcha
         self.data = self.driver.page_source # save data
         self.driver.switch_to.default_content()  # switch back
-        return False
+        return self
 
     def interact(self, element, nth):
         nth = int(nth)
-        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1])
+        self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CAPTCHA))
 
-        print(element)
-        # if element == 'rc-image-tile-overlay':
-        #     element = 'rc-image-tile-wrapper'
+        self.core.log.debug('CaptchaTask: ' + element)
         if element == 'recaptcha-verify-button':
             self.driver.find_element_by_id('recaptcha-verify-button').click()
-            print('click button')
+            self.core.log.debug('click button')
         elif element in ['rc-image-tile-wrapper', 'rc-imageselect-checkbox']:
             selected_elements = self.driver.find_elements_by_class_name(element)
             if 0 <= nth < len(selected_elements):
                 selected_elements[nth].click()
-                print('click')
+                self.core.log.debug('CaptchaTask: click')
             else:
-                print('no click :(')
+                self.core.log.debug('CaptchaTask: no click :(')
                 self.data = "<html><body><p>Something went wrong</p></body></html>"
                 return
 
@@ -162,19 +180,20 @@ class CaptchaTask():
             self.data = "<html><body><p>Successful</p></body></html>"
             return True
 
-        self.driver.switch_to.frame(self.driver.find_elements_by_tag_name("iframe")[1])
+        self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CAPTCHA))
         self.data = self.driver.page_source  # save data
         self.driver.switch_to.default_content()  # switch back
 
     def is_interaction_complete(self):
         response = self.driver.find_element_by_id('g-recaptcha-response').get_attribute('value')
         if not response:
-            print('interaction not complete')
+            self.core.log.debug('CaptchaTask: interaction not complete')
             return False
 
         self.setResult(response)
-        print('interaction complete')
-        print(response)
+        self.core.log.debug('CaptchaTask: interaction complete')
+        self.core.log.debug('CaptchaTask: response:' + response)
+        self.driver.quit()
         return True
 
     def getCaptcha(self):

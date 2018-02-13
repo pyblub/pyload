@@ -62,13 +62,14 @@ class AccountInfo(BaseObject):
 		self.type = type
 
 class CaptchaTask(BaseObject):
-	__slots__ = ['tid', 'data', 'type', 'resultType']
+	__slots__ = ['tid', 'data', 'type', 'resultType', 'interactive']
 
-	def __init__(self, tid=None, data=None, type=None, resultType=None):
+	def __init__(self, tid=None, data=None, type=None, resultType=None, interactive=None):
 		self.tid = tid
 		self.data = data
 		self.type = type
 		self.resultType = resultType
+		self.interactive = interactive
 
 class ConfigItem(BaseObject):
 	__slots__ = ['name', 'description', 'value', 'type']

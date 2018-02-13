@@ -286,7 +286,7 @@ $(function() {
             // sometimes the div with class rc-image-tile-overlay is clicked, but we need the parent div with class rc-image-tile-wrapper needs to be clicked
             // otherwise returning the class works for rc-imageselect-checkbox to unckeck an image
             className = $(event.target).prop("tagName") === "IMG" || $(event.target).attr("class") === "rc-image-tile-overlay" ? $(event.target).parent().attr("class") : $(event.target).attr("class");
-            nth = $(event.target).prop("tagName") === "IMG" ? getElementNth($(event.target).parent().get(0), className) : getElementNth(event.target, className);
+            nth = $(event.target).prop("tagName") === "IMG" ? getElementNth($(event.target).parent().get(0), $(event.target).parent().get(0).className) : getElementNth(event.target, $(event.target).attr("class"));
             if (nth < 0) {
                 alert('Something went wrong: cap_selenium_content');
                 return;
@@ -382,23 +382,20 @@ function LoadJsonToContent(a) {
 
 function set_captcha(a) {
     $("#cap_id").val(a.id);
+    $("#cap_initial").css("display", "none");
     if (a.result_type === "textual") {
         $("#cap_textual_img").attr("src", a.src);
         $("#cap_submit").css("display", "inline");
         $("#cap_box #cap_title").text('');
         $("#cap_textual").css("display", "block");
-        $("#cap_selenium").css("display", "none");
-        return $("#cap_positional").css("display", "none");
     } else if (a.result_type === "positional") {
         $("#cap_positional_img").attr("src", a.src);
         $("#cap_box #cap_title").text("{{_('Please click on the right captcha position.')}}");
         $("#cap_submit").css("display", "none");
-        $("#cap_selenium").css("display", "none");
-        return $("#cap_textual").css("display", "none");
+        $("#cap_positional").css("display", "block");
     } else if (a.result_type === "selenium") {
-        $("#cap_textual").css("display", "none");
-        $("#cap_positional").css("display", "none");
         $("#cap_submit").css("display", "none");
+        $("#cap_selenium").css("display", "block");
         $("#cap_selenium_content").html(a.src);
         $("#cap_selenium_content").attr("data-id", a.id);
     }

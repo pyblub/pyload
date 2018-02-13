@@ -8,7 +8,10 @@
       <div class="modal-body text-left">
       <div id="cap_title"></div>
         <form id="cap_form" class="form-group" action="{{'/json/set_captcha'|url}}" method="POST" enctype="multipart/form-data" onsubmit="return false;" style="margin-bottom: 40px;">
-          <div id="cap_textual">
+          <div id="cap_initial">
+            <h2>This could take 1-2 Minutes.</h2>
+          </div>
+          <div id="cap_textual" style="display: none;">
             <input id="cap_id" name="cap_id" type="hidden" value=""/>
             <div class="form-group">
               <label for="cap_textual_img">{{_('Captcha')}}</label>
@@ -21,12 +24,12 @@
             </div>
           </div>
 
-          <div id="cap_positional" style="text-align: center">
+          <div id="cap_positional" style="display: none; text-align: center">
               <img id="cap_positional_img" src="" style="margin: 10px; cursor:pointer">
             <div class="small">{{_('Please click on the right captcha position.')}}</div>
           </div>
 
-          <div id="cap_selenium" style="text-align: center">
+          <div id="cap_selenium" style="display: none;">
             <div id="cap_selenium_content" data-id=""></div>
           </div>
           <button class="btn btn-success pull-right" id="cap_submit" type="submit" style="margin-left: 5px;">{{_('Submit')}}</button>

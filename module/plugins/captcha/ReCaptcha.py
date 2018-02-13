@@ -2,6 +2,7 @@
 
 import os
 import re
+import time
 import urllib
 import urlparse
 from StringIO import StringIO
@@ -354,3 +355,39 @@ class ReCaptcha(CaptchaService):
             self.fail(_("Recaptcha max retries exceeded"))
 
         return result, challenge
+
+    def decrypt_recaptcha(self, link, initialize_driver=None, input_type='selenium', output_type='selenium', timeout=120):
+        captchaManager = self.pyload.captchaManager
+
+        try:
+            self.task = captchaManager.newTask(
+                link, input_type, link, output_type, initialize_driver)
+
+            captchaManager.handleCaptcha(self.task)
+
+            # @TODO: Move to `CaptchaManager` in 0.4.10
+            self.task.setWaiting(max(timeout, 50))
+            while self.task.isWaiting():
+                self.pyfile.plugin.check_status()
+                time.sleep(1)
+
+        finally:
+            captchaManager.removeTask(self.task)
+
+        result = self.task.result
+
+        if self.task.error:
+            if not self.task.handler and not self.pyload.isClientConnected():
+                self.log_warning(
+                    _("No Client connected for captcha decrypting"))
+                self.fail(_("No Client connected for captcha decrypting"))
+            else:
+                self.pyfile.plugin.retry_captcha(msg=self.task.error)
+
+        elif self.task.result:
+            self.log_info(_("Captcha result: `%s`") % (result,))
+
+        else:
+            self.pyfile.plugin.retry_captcha(
+                msg=_("No captcha result obtained in appropriate timing"))
+        return result

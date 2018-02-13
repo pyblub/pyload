@@ -12,7 +12,7 @@ from ..internal.SimpleHoster import SimpleHoster
 class ShareonlineBiz(SimpleHoster):
     __name__ = "ShareonlineBiz"
     __type__ = "hoster"
-    __version__ = "0.66"
+    __version__ = "0.67"
     __status__ = "testing"
 
     __pattern__ = r'https?://(?:www\.)?(share-online\.biz|egoshare\.com)/(download\.php\?id=|dl/)(?P<ID>\w+)'
@@ -68,8 +68,16 @@ class ShareonlineBiz(SimpleHoster):
         self.multiDL = False
 
     def handle_captcha(self):
+        def inititialize_driver(driver):
+            buttons = driver.find_elements_by_css_selector('button.dl_action')
+            for b in buttons:
+                if 'free' in b.text:
+                    b.click()
+                    break
+
         self.captcha = ReCaptcha(self.pyfile)
-        response, challenge = self.captcha.challenge(self.RECAPTCHA_KEY)
+        response = self.captcha.decrypt_recaptcha(self.pyfile.url, inititialize_driver)
+        challenge = response
 
         m = re.search(r'var wait=(\d+);', self.data)
         self.set_wait(int(m.group(1)) if m else 30)

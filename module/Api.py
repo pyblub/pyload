@@ -782,7 +782,6 @@ class Api(Iface):
             order[pyfile["order"]] = pyfile["id"]
         return order
 
-
     @permission(PERMS.STATUS)
     def isCaptchaWaiting(self):
         """Indicates wether a captcha task is available
@@ -794,36 +793,9 @@ class Api(Iface):
         return not task is None
 
 
-    def addInteractiveCaptchaTask(self):
-        link = 'https://my.domain.com/website_with_no_iframes_and_google_recaptcha.html'
-        input_type = 'selenium'
-        output_type='selenium'
-        task =  self.core.captchaManager.newTask(link, input_type, link, output_type)
-        self.core.captchaManager.handleCaptcha(task)
-        return task
-
-
     @permission(PERMS.STATUS)
-    def getInteractiveCaptchaTask(self, exclusive=False):
-        """Returns a captcha task
-
-        :param exclusive: unused
-        :return: `CaptchaTask`
-        """
-        self.core.lastClientConnected = time()
-        task = self.core.captchaManager.getTask()
-        if task and task.isInteractive():
-            task.setWatingForUser(exclusive=exclusive)
-            return task
-            # data, type, result = task.getCaptcha()
-            # t = CaptchaTask(int(task.id), standard_b64encode(data), type, result)
-            # return t
-        else:
-            return CaptchaTask(-1)
-
-    @permission(PERMS.STATUS)
-    def startInteractiveCaptchaTask(self, taskid):
-        """Returns a captcha task
+    def startInteractiveCaptchaTask(self, taskid, exclusive=False):
+        """Start an interactive captcha and returns a captcha task
 
         :param exclusive: unused
         :return: `CaptchaTask`
@@ -831,18 +803,21 @@ class Api(Iface):
         self.core.lastClientConnected = time()
         task = self.core.captchaManager.getTaskByID(taskid)
         if task and task.isInteractive():
-            task.start_interaction()
-            #task.setWatingForUser(exclusive=exclusive)
-            return task
-            # data, type, result = task.getCaptcha()
-            # t = CaptchaTask(int(task.id), standard_b64encode(data), type, result)
-            # return t
+            task.setWatingForUser(exclusive=exclusive)
+            task = task.start_interaction()
+            if not task:
+                return CaptchaTask(-1)
+            if task.result:
+                self.core.captchaManager.removeTask(task)
+                return None
+            t = CaptchaTask(int(task.id), task.data, task.captchaFormat, task.captchaResultType, task.isInteractive())
+            return t
         else:
             return CaptchaTask(-1)
 
     @permission(PERMS.STATUS)
     def interactWithCaptchaTask(self, taskid, element, nth):
-        """Returns a captcha task
+        """Interact with a captcha and returns a captcha task
 
         :param exclusive: unused
         :return: `CaptchaTask`
@@ -854,7 +829,8 @@ class Api(Iface):
             if task.result:
                 self.core.captchaManager.removeTask(task)
                 return None
-            return task
+            t = CaptchaTask(int(task.id), task.data, task.captchaFormat, task.captchaResultType, task.isInteractive())
+            return t
         else:
             return None
 
@@ -870,7 +846,7 @@ class Api(Iface):
         if task:
             task.setWatingForUser(exclusive=exclusive)
             data, type, result = task.getCaptcha()
-            t = CaptchaTask(int(task.id), standard_b64encode(data), type, result)
+            t = CaptchaTask(int(task.id), standard_b64encode(data), type, result, task.isInteractive())
             return t
         else:
             return CaptchaTask(-1)

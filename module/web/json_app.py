@@ -212,28 +212,14 @@ def edit_package():
         return HTTPError()
 
 
-# for testing only
-@route("/json/add_interactive_task")
-def add_interactive_task():
-    task = PYLOAD.addInteractiveCaptchaTask()
-    return {'captcha': True, 'id': task.id, 'src': task.captchaImg, 'result_type': task.captchaResultType}
-
-# @route("/json/start_interactive_captcha")
-# @route("/json/start_interactive_captcha", method="POST")
-# @login_required('ADD')
-# def start_interactive_captcha():
-#     task = PYLOAD.getInteractiveCaptchaTask()
-#     task.start()
-
-
 @route("/json/interact_captcha/<taskid:int>/<element>/<nth:int>")
 @route("/json/interact_captcha/<taskid:int>/<element>/<nth:int>", method="POST")
 @login_required('ADD')
 def interact_captcha(taskid, element, nth):
     task = PYLOAD.interactWithCaptchaTask(taskid, element, nth)
-    if task is None:
+    if task is None or task.tid < 0:
         return {'captcha': False}
-    return {'captcha': True, 'id': task.id, 'src': task.data, 'result_type': task.captchaResultType}
+    return {'captcha': True, 'id': task.tid, 'src': task.data, 'result_type': task.resultType}
 
 
 @route("/json/set_captcha")
@@ -251,15 +237,15 @@ def set_captcha():
     if task.tid < 0:
         return {'captcha': False}
 
-    # for testing purposes
-    if False:
-    #if not task.isInteractive():
+    if not task.interactive:
         src = "data:image/%s;base64,%s" % (task.type, task.data)
-        return {'captcha': True, 'id': task.tid, 'src': src, 'result_type' : task.resultType}
+        return {'captcha': True, 'id': task.tid, 'src': src, 'result_type': task.resultType}
 
     # task is interactive
     task = PYLOAD.startInteractiveCaptchaTask(task.tid)
-    return {'captcha': True, 'id': task.id, 'src': task.data, 'result_type' : task.captchaResultType}
+    if task is None or task.tid < 0:
+        return {'captcha': False}
+    return {'captcha': True, 'id': task.tid, 'src': task.data, 'result_type': task.resultType}
 
 
 @route("/json/load_config/:category/:section")
