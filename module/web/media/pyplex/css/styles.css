@@ -458,3 +458,18 @@ textarea.form-control:focus {
 fieldset[disabled] .btn {
   pointer-events: auto;
 }
+
+#cap_selenium {
+  position: relative;
+}
+
+#cap_selenium_overlay {
+  display: none;
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  top: 0;
+  bottom: 0;
+  background: black;
+  opacity: 0.5;
+}

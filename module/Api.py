@@ -835,6 +835,23 @@ class Api(Iface):
             return None
 
     @permission(PERMS.STATUS)
+    def reloadCaptchaTask(self, taskid, exclusive=False):
+        """Returns a captcha task
+
+        :param exclusive: unused
+        :return: `CaptchaTask`
+        """
+        self.core.lastClientConnected = time()
+        task = self.core.captchaManager.getTaskByID(taskid)
+        if task:
+            task = task.reload()
+            data, type, result = task.getCaptcha()
+            t = CaptchaTask(int(task.id), task.data if task.isInteractive() else standard_b64encode(data), type, result, task.isInteractive())
+            return t
+        else:
+            return CaptchaTask(-1)
+
+    @permission(PERMS.STATUS)
     def getCaptchaTask(self, exclusive=False):
         """Returns a captcha task
 
@@ -846,7 +863,7 @@ class Api(Iface):
         if task:
             task.setWatingForUser(exclusive=exclusive)
             data, type, result = task.getCaptcha()
-            t = CaptchaTask(int(task.id), standard_b64encode(data), type, result, task.isInteractive())
+            t = CaptchaTask(int(task.id), task.data if task.isInteractive() else standard_b64encode(data), type, result, task.isInteractive())
             return t
         else:
             return CaptchaTask(-1)

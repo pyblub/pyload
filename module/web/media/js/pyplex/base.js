@@ -266,6 +266,10 @@ $(function() {
             // stop()??
     });
 
+    $("#cap_reload").click(function() {
+            reload_captcha();
+    });
+
     $("#cap_box #cap_positional").click(on_captcha_click);
     $.ajax({
         method:"post",
@@ -293,6 +297,7 @@ $(function() {
             }
         }
         var id = $("#cap_selenium_content").attr("data-id");
+        $("#cap_selenium_overlay").css("display", "block");
         $.ajax({
             method:"post",
             url: "{{'/json/interact_captcha/'|url}}" + id + "/" + encodeURI(className) + "/" + nth + "/",
@@ -398,7 +403,24 @@ function set_captcha(a) {
         $("#cap_selenium").css("display", "block");
         $("#cap_selenium_content").html(a.src);
         $("#cap_selenium_content").attr("data-id", a.id);
+        $("#cap_selenium_overlay").css("display", "none");
     }
+}
+
+function reload_captcha() {
+    var id = $("#cap_selenium_content").attr("data-id");
+    $("#cap_selenium_overlay").css("display", "block");
+    $.ajax({
+        method: "post",
+        url: "{{'/json/reload_captcha/'|url}}" + id + "/",
+        data: {id: id},
+        async: true,
+        timeout: 30000,
+        success: function (c) {
+            set_captcha(c);
+            return (c.captcha ? void 0 : clear_captcha());
+        }
+    });
 }
 
 function load_captcha(b, a) {
@@ -420,6 +442,10 @@ function clear_captcha() {
     $("#cap_textual_img").attr("src", "");
     $("#cap_positional").css("display", "none");
     $("#cap_positional_img").attr("src", "");
+    $("#cap_selenium").css("display", "none");
+    $("#cap_selenium_content").attr("data-id", "");
+    $("#cap_selenium_content").html("");
+    $("#cap_selenium_overlay").css("display", "none");
     $("#cap_submit").css("display", "none");
     $("#cap_box #cap_title").text("{{_('No Captchas to read.')}}");
     $('#cap_box').modal('toggle');

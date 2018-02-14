@@ -69,7 +69,7 @@ class CaptchaManager():
         cli = self.core.isClientConnected()
 
         if cli: #client connected -> should solve the captcha
-            task.setWaiting(50) #wait 50 sec for response
+            task.setWaiting(500) #wait 50 sec for response
 
         for plugin in self.core.hookManager.activePlugins():
             try:
@@ -162,7 +162,7 @@ class CaptchaTask():
         self.core.log.debug('CaptchaTask: ' + element)
         if element == 'recaptcha-verify-button':
             self.driver.find_element_by_id('recaptcha-verify-button').click()
-            self.core.log.debug('click button')
+            self.core.log.debug('CaptchaTask: click button')
         elif element in ['rc-image-tile-wrapper', 'rc-imageselect-checkbox']:
             selected_elements = self.driver.find_elements_by_class_name(element)
             if 0 <= nth < len(selected_elements):
@@ -183,6 +183,12 @@ class CaptchaTask():
         self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CAPTCHA))
         self.data = self.driver.page_source  # save data
         self.driver.switch_to.default_content()  # switch back
+
+    def reload(self):
+        self.driver.switch_to.frame(self.driver.find_element_by_xpath(self.XPATH_IFRAME_CAPTCHA))
+        self.data = self.driver.page_source  # save data
+        self.driver.switch_to.default_content()  # switch back
+        return self
 
     def is_interaction_complete(self):
         response = self.driver.find_element_by_id('g-recaptcha-response').get_attribute('value')

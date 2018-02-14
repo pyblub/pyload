@@ -247,6 +247,23 @@ def set_captcha():
         return {'captcha': False}
     return {'captcha': True, 'id': task.tid, 'src': task.data, 'result_type': task.resultType}
 
+@route("/json/reload_captcha/<taskid:int>")
+@route("/json/reload_captcha/<taskid:int>", method="POST")
+@login_required('ADD')
+def reload_captcha(taskid):
+    task = PYLOAD.reloadCaptchaTask(taskid)
+
+    if task.tid < 0:
+        return {'captcha': False}
+
+    if not task.interactive:
+        src = "data:image/%s;base64,%s" % (task.type, task.data)
+        return {'captcha': True, 'id': task.tid, 'src': src, 'result_type': task.resultType}
+
+    # task is interactive
+    if task is None or task.tid < 0:
+        return {'captcha': False}
+    return {'captcha': True, 'id': task.tid, 'src': task.data, 'result_type': task.resultType}
 
 @route("/json/load_config/:category/:section")
 @login_required("SETTINGS")
